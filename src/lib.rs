@@ -514,7 +514,7 @@ extern "C" {
     pub fn osThreadJoin(thread_id: osThreadId_t) -> osStatus_t;
 
     /// Terminate execution of current running thread.
-    pub fn osThreadExit();
+    pub fn osThreadExit() -> !;
 
     /// Terminate execution of a thread.
     ///
