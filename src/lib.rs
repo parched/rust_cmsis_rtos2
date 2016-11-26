@@ -17,12 +17,16 @@
 //
 // ----------------------------------------------------------------------
 //
-// $Date:        20. October 2016
-// $Revision:    V2.0
+// $Date:        25. November 2016
+// $Revision:    V2.1
 //
 // Project:      CMSIS-RTOS2 API
 // Title:        cmsis_os2.h header file
 //
+// Version 2.1
+//    Support for critical and uncritical sections (nesting safe)
+//    - updated: osKernelLock, osKernelUnlock
+//    - added: osKernelRestoreLock
 // Version 2.0
 //    Initial Release
 // -----------------------------------------------------------------------
@@ -153,16 +157,19 @@ pub enum osPriority_t {
 }
 
 /// Entry point of a thread.
-pub type os_thread_func_t = unsafe extern "C" fn(argument: *mut ::c_void);
+pub type osThreadFunc_t = unsafe extern "C" fn(argument: *mut ::c_void);
 
 /// Entry point of a timer call back function.
-pub type os_timer_func_t = unsafe extern "C" fn(argument: *mut ::c_void);
+pub type osTimerFunc_t = unsafe extern "C" fn(argument: *mut ::c_void);
 
 
 /// Timer type.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-pub enum osTimerType_t { osTimerOnce = 0, osTimerPeriodic = 1, }
+pub enum osTimerType_t {
+    osTimerOnce = 0,
+    osTimerPeriodic = 1,
+}
 
 /// Status code values returned by CMSIS-RTOS functions.
 #[repr(i32)]
@@ -356,11 +363,26 @@ extern "C" {
     ///
     /// # Returns
     ///
-    /// 0 already locked, 1 locked.
-    pub fn osKernelLock() -> u32;
+    /// Previous lock state (1 - locked, 0 - not locked, error code if negative).
+    pub fn osKernelLock() -> i32;
 
     /// Unlock the RTOS Kernel scheduler.
-    pub fn osKernelUnlock();
+    ///
+    /// # Returns
+    ///
+    /// Previous lock state (1 - locked, 0 - not locked, error code if negative).
+    pub fn osKernelUnlock() -> i32;
+
+    /// Restore the RTOS Kernel scheduler lock state.
+    ///
+    /// # Parameters
+    ///
+    /// * [in]     `lock`          Lock state obtained by [`osKernelLock`] or [`osKernelUnlock`].
+    ///
+    /// # Returns
+    ///
+    /// New lock state (1 - locked, 0 - not locked, error code if negative).
+    pub fn osKernelRestoreLock(lock: i32) -> i32;
 
     /// Suspend the RTOS Kernel scheduler.
     ///
@@ -415,7 +437,7 @@ extern "C" {
     /// # Returns
     ///
     /// Thread ID for reference by other functions or NULL in case of error.
-    pub fn osThreadNew(func: os_thread_func_t, argument: *mut ::c_void, attr: *const osThreadAttr_t) -> osThreadId_t;
+    pub fn osThreadNew(func: osThreadFunc_t, argument: *mut ::c_void, attr: *const osThreadAttr_t) -> osThreadId_t;
 
     /// Get name of a thread.
     ///
@@ -645,14 +667,14 @@ extern "C" {
     /// # Parameters
     ///
     /// * [in]     `func`          Start address of a timer call back function.
-    /// * [in]     `type`          OsTimerOnce for one-shot or osTimerPeriodic for periodic behavior.
+    /// * [in]     `type_`          OsTimerOnce for one-shot or osTimerPeriodic for periodic behavior.
     /// * [in]     `argument`      Argument to the timer call back function.
     /// * [in]     `attr`          Timer attributes; NULL: default values.
     ///
     /// # Returns
     ///
     /// Timer ID for reference by other functions or NULL in case of error.
-    pub fn osTimerNew(func: os_timer_func_t, type_: osTimerType_t, argument: *mut ::c_void, attr: *const osTimerAttr_t) -> osTimerId_t;
+    pub fn osTimerNew(func: osTimerFunc_t, type_: osTimerType_t, argument: *mut ::c_void, attr: *const osTimerAttr_t) -> osTimerId_t;
 
     /// Get name of a timer.
     ///
